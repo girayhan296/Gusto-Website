@@ -2,18 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '../supabase';
 
-function getTokens(location) {
+function getAccessToken(location) {
   // Query string'den
   const query = new URLSearchParams(location.search);
   let access_token = query.get('access_token');
-  let refresh_token = query.get('refresh_token');
   // Hash'ten
-  if (location.hash) {
+  if (!access_token && location.hash) {
     const hashParams = new URLSearchParams(location.hash.replace(/^#/, ''));
-    if (!access_token) access_token = hashParams.get('access_token');
-    if (!refresh_token) refresh_token = hashParams.get('refresh_token');
+    access_token = hashParams.get('access_token');
   }
-  return { access_token, refresh_token };
+  return access_token;
 }
 
 const ResetPassword = () => {
@@ -22,16 +20,13 @@ const ResetPassword = () => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const location = useLocation();
-  const { access_token, refresh_token } = getTokens(location);
+  const access_token = getAccessToken(location);
 
   useEffect(() => {
     if (access_token) {
       console.log('access_token:', access_token);
     }
-    if (refresh_token) {
-      console.log('refresh_token:', refresh_token);
-    }
-  }, [access_token, refresh_token]);
+  }, [access_token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -47,14 +42,14 @@ const ResetPassword = () => {
       console.warn('Şifreler eşleşmiyor');
       return;
     }
-    if (!access_token || !refresh_token) {
+    if (!access_token) {
       setError('Geçersiz veya eksik bağlantı.');
-      console.error('Token eksik:', { access_token, refresh_token });
+      console.error('Token eksik:', { access_token });
       return;
     }
     try {
-      console.log('setSession başlatılıyor:', { access_token, refresh_token });
-      const { error: sessionError } = await supabase.auth.setSession({ access_token, refresh_token });
+      console.log('setSession başlatılıyor:', { access_token });
+      const { error: sessionError } = await supabase.auth.setSession({ access_token, refresh_token: '' });
       if (sessionError) {
         setError('Oturum başlatılamadı: ' + sessionError.message);
         console.error('setSession error:', sessionError);
