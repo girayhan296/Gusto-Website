@@ -24,7 +24,12 @@ function App() {
     <BrowserRouter>
       <Navigation />
       <Routes>
-        <Route path="/" element={<div style={{textAlign:'center',marginTop:'2rem'}}><h2>Hoşgeldiniz</h2><p>Lütfen bir işlem seçin.</p></div>} />
+        <Route path="/" element={
+          <div style={{textAlign:'center',marginTop:'6rem'}}>
+            <h2>Hoşgeldiniz</h2>
+            <p style={{fontSize:'1.2rem',marginTop:24}}>Şu an bu ekran bakım durumundadır.</p>
+          </div>
+        } />
         <Route path="/signup" element={<Signup />} />
         <Route path="/reset" element={<ResetRequest />} />
         <Route path="/reset-password" element={<ResetPassword />} />
