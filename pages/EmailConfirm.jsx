@@ -12,9 +12,9 @@ const EmailConfirm = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-      <img src="/gusto-logo.png" alt="Gusto Logo" style={{ width: 200, height: 200, marginBottom: 40 }} />
-      <h2 style={{ fontWeight: 'bold', fontSize: '2rem', marginBottom: 20, textAlign: 'center' }}>HESABINIZ BAŞARIYLA DOĞRULANDI.</h2>
-      <p style={{ fontWeight: 'bold', fontSize: '1.3rem', textAlign: 'center' }}>
+      <img src="/gusto-logo.png" alt="Gusto Logo" style={{ width: 120, height: 120, marginBottom: 32 }} />
+      <h2 style={{ fontWeight: 'bold', fontSize: '1.3rem', marginBottom: 16, textAlign: 'center' }}>HESABINIZ BAŞARIYLA DOĞRULANDI.</h2>
+      <p style={{ fontWeight: 'bold', fontSize: '1rem', textAlign: 'center' }}>
         GUSTO - Freelancer uygulamasında oturum açarak işleminize devam edebilirsiniz.
       </p>
     </div>
