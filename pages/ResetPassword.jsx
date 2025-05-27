@@ -1,12 +1,23 @@
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import { supabase } from '../supabase';
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const location = useLocation();
+  const query = new URLSearchParams(location.search);
+  const accessToken = query.get('access_token');
 
-  const handleSubmit = (e) => {
+  React.useEffect(() => {
+    if (accessToken) {
+      console.log('access_token:', accessToken);
+    }
+  }, [accessToken]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
     setError('');
@@ -18,8 +29,27 @@ const ResetPassword = () => {
       setError('Şifreler eşleşmiyor.');
       return;
     }
-    // Burada şifre güncelleme işlemi yapılacak (örnek)
-    setMessage('Şifreniz başarıyla güncellendi!');
+    if (!accessToken) {
+      setError('Geçersiz veya eksik bağlantı.');
+      return;
+    }
+    try {
+      // 1. access_token ile oturumu ayarla
+      const { error: sessionError } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: '' });
+      if (sessionError) {
+        setError('Oturum başlatılamadı: ' + sessionError.message);
+        return;
+      }
+      // 2. Şifreyi güncelle
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) {
+        setError('Şifre güncellenemedi: ' + updateError.message);
+      } else {
+        setMessage('Şifreniz başarıyla güncellendi!');
+      }
+    } catch (err) {
+      setError('Bir hata oluştu.');
+    }
   };
 
   return (

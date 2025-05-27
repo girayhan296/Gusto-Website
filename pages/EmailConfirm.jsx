@@ -1,14 +1,22 @@
 import React, { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '../supabase';
 
 const EmailConfirm = () => {
+  const location = useLocation();
+  const query = new URLSearchParams(location.search);
+  const accessToken = query.get('access_token');
+
   useEffect(() => {
+    if (accessToken) {
+      console.log('access_token:', accessToken);
+    }
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
         // alert('Hesabınız doğrulandı!'); // Artık alert yok
       }
     });
-  }, []);
+  }, [accessToken]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
