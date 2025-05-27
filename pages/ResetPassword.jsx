@@ -39,32 +39,39 @@ const ResetPassword = () => {
     setError('');
     if (!password || !confirm) {
       setError('Lütfen tüm alanları doldurun.');
+      console.warn('Eksik alan');
       return;
     }
     if (password !== confirm) {
       setError('Şifreler eşleşmiyor.');
+      console.warn('Şifreler eşleşmiyor');
       return;
     }
     if (!access_token || !refresh_token) {
       setError('Geçersiz veya eksik bağlantı.');
+      console.error('Token eksik:', { access_token, refresh_token });
       return;
     }
     try {
-      // 1. access_token ve refresh_token ile oturumu ayarla
+      console.log('setSession başlatılıyor:', { access_token, refresh_token });
       const { error: sessionError } = await supabase.auth.setSession({ access_token, refresh_token });
       if (sessionError) {
         setError('Oturum başlatılamadı: ' + sessionError.message);
+        console.error('setSession error:', sessionError);
         return;
       }
-      // 2. Şifreyi güncelle
+      console.log('setSession başarılı, updateUser çağrılıyor');
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) {
         setError('Şifre güncellenemedi: ' + updateError.message);
+        console.error('updateUser error:', updateError);
       } else {
         setMessage('Şifreniz başarıyla güncellendi!');
+        console.log('Şifre başarıyla güncellendi!');
       }
     } catch (err) {
       setError('Bir hata oluştu.');
+      console.error('Genel hata:', err);
     }
   };
 
