@@ -108,8 +108,8 @@ const ResetPassword = () => {
         return;
       }
 
-      setMessage('Şifreniz başarıyla güncellendi! Yönlendiriliyorsunuz...');
-      setTimeout(() => navigate('/login'), 2000);
+      setMessage('Şifreniz başarıyla güncellendi!');
+      setIsLoading(false);
 
     } catch (err) {
       console.error('Genel hata:', err);
