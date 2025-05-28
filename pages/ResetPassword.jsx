@@ -2,14 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 
-// Tokenları doğrudan window.location.hash'ten al
-function getTokens() {
-  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-  const access_token = hashParams.get('access_token');
-  const refresh_token = hashParams.get('refresh_token');
-  return { access_token, refresh_token };
-}
-
 const validatePassword = (password) => {
   const minLength = 8;
   const hasUpperCase = /[A-Z]/.test(password);
@@ -31,18 +23,19 @@ const ResetPassword = () => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [tokens, setTokens] = useState({ access_token: null, refresh_token: null });
 
   const navigate = useNavigate();
 
   useEffect(() => {
-    const { access_token, refresh_token } = getTokens();
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        console.log('Password recovery event detected');
+      }
+    });
 
-    if (!access_token || !refresh_token) {
-      setError('Geçersiz bağlantı veya token eksik.');
-    } else {
-      setTokens({ access_token, refresh_token });
-    }
+    return () => {
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   const handleSubmit = async (e) => {
@@ -71,38 +64,20 @@ const ResetPassword = () => {
     }
 
     try {
-      await supabase.auth.signOut();
-
-      const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
-      });
-
-      if (sessionError || !sessionData.session) {
-        console.error('Oturum hatası:', sessionError);
-        setError('Oturum başlatılamadı. Lütfen bağlantıyı kontrol edin.');
-        setIsLoading(false);
-        return;
-      }
-
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: password,
-      });
+      const { error: updateError } = await supabase.auth.updateUser({ password });
 
       if (updateError) {
         console.error('Şifre güncelleme hatası:', updateError);
-        setError('Şifre güncellenemedi. Lütfen daha sonra tekrar deneyin.');
-        setIsLoading(false);
-        return;
+        setError('Şifre güncellenemedi. Lütfen tekrar deneyin.');
+      } else {
+        setMessage('Şifreniz başarıyla güncellendi!');
+        setTimeout(() => {
+          navigate('/login');
+        }, 2500);
       }
-
-      setMessage('Şifreniz başarıyla güncellendi!');
-      setTimeout(() => {
-        navigate('/login');
-      }, 2500);
     } catch (err) {
       console.error('Genel hata:', err);
-      setError('Bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
+      setError('Bir hata oluştu. Lütfen tekrar deneyin.');
     }
 
     setIsLoading(false);
@@ -121,7 +96,7 @@ const ResetPassword = () => {
             placeholder="Yeni şifre"
             value={password}
             onChange={e => setPassword(e.target.value)}
-            style={{ width: '100%', padding: 12, marginBottom: 12, borderRadius: 8, border: '1px solid #ccc', fontSize: 16, boxSizing: 'border-box', height: 48 }}
+            style={{ width: '100%', padding: 12, marginBottom: 12, borderRadius: 8, border: '1px solid #ccc', fontSize: 16, height: 48 }}
             disabled={isLoading}
           />
           <input
@@ -129,7 +104,7 @@ const ResetPassword = () => {
             placeholder="Yeni şifre (tekrar)"
             value={confirm}
             onChange={e => setConfirm(e.target.value)}
-            style={{ width: '100%', padding: 12, marginBottom: 20, borderRadius: 8, border: '1px solid #ccc', fontSize: 16, boxSizing: 'border-box', height: 48 }}
+            style={{ width: '100%', padding: 12, marginBottom: 20, borderRadius: 8, border: '1px solid #ccc', fontSize: 16, height: 48 }}
             disabled={isLoading}
           />
           <button
