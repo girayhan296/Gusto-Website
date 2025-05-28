@@ -82,22 +82,41 @@ const ResetPassword = () => {
     }
 
     try {
-      const { error: sessionError } = await supabase.auth.setSession({ access_token, refresh_token: '' });
-      if (sessionError) {
-        setError('Oturum başlatılamadı: ' + sessionError.message);
+      // Önce mevcut oturumu kontrol edelim
+      const { data: { session }, error: sessionCheckError } = await supabase.auth.getSession();
+      
+      if (sessionCheckError) {
+        setError('Oturum kontrolü başarısız: ' + sessionCheckError.message);
         setIsLoading(false);
         return;
       }
 
+      // Eğer aktif bir oturum yoksa, yeni oturum başlatmaya çalışalım
+      if (!session) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token,
+          refresh_token: null // null olarak değiştirdik
+        });
+
+        if (sessionError) {
+          setError('Oturum başlatılamadı: ' + sessionError.message);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Şifre güncelleme işlemi
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) {
         setError('Şifre güncellenemedi: ' + updateError.message);
       } else {
         setMessage('Şifreniz başarıyla güncellendi! Yönlendiriliyorsunuz...');
+        // Başarılı şifre değişikliğinden sonra oturumu sonlandır
+        await supabase.auth.signOut();
         setTimeout(() => navigate('/login'), 2000);
       }
     } catch (err) {
-      setError('Bir hata oluştu: ' + err.message);
+      setError('Bir hata oluştu: ' + (err.message || 'Bilinmeyen bir hata oluştu'));
     } finally {
       setIsLoading(false);
     }
