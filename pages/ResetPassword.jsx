@@ -1,20 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 
-function getTokens(location) {
-  // 1. Önce hash'ten çek
-  const hashParams = new URLSearchParams(location.hash.replace(/^#/, ''));
-  let access_token = hashParams.get('access_token');
-  let refresh_token = hashParams.get('refresh_token');
-
-  // 2. Eğer hash'te yoksa query'den çek (geçici çözüm)
-  if (!access_token || !refresh_token) {
-    const query = new URLSearchParams(location.search);
-    access_token = access_token || query.get('access_token');
-    refresh_token = refresh_token || query.get('refresh_token');
-  }
-
+// Tokenları doğrudan window.location.hash'ten al
+function getTokens() {
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const access_token = hashParams.get('access_token');
+  const refresh_token = hashParams.get('refresh_token');
   return { access_token, refresh_token };
 }
 
@@ -39,16 +31,19 @@ const ResetPassword = () => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const location = useLocation();
+  const [tokens, setTokens] = useState({ access_token: null, refresh_token: null });
+
   const navigate = useNavigate();
 
-  const { access_token, refresh_token } = getTokens(location);
-
   useEffect(() => {
+    const { access_token, refresh_token } = getTokens();
+
     if (!access_token || !refresh_token) {
       setError('Geçersiz bağlantı veya token eksik.');
+    } else {
+      setTokens({ access_token, refresh_token });
     }
-  }, [access_token, refresh_token]);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -76,13 +71,11 @@ const ResetPassword = () => {
     }
 
     try {
-      // Oturumu kapat (önlem olarak)
       await supabase.auth.signOut();
 
-      // Oturumu token ile başlat
       const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-        access_token,
-        refresh_token,
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
       });
 
       if (sessionError || !sessionData.session) {
@@ -92,7 +85,6 @@ const ResetPassword = () => {
         return;
       }
 
-      // Şifreyi güncelle
       const { error: updateError } = await supabase.auth.updateUser({
         password: password,
       });
@@ -108,7 +100,6 @@ const ResetPassword = () => {
       setTimeout(() => {
         navigate('/login');
       }, 2500);
-
     } catch (err) {
       console.error('Genel hata:', err);
       setError('Bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
