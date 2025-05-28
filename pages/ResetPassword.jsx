@@ -80,26 +80,42 @@ const ResetPassword = () => {
     }
 
     try {
-      // Önce token'ı decode edelim
-      const tokenParts = access_token.split('.');
-      if (tokenParts.length !== 3) {
-        throw new Error('Geçersiz token formatı');
-      }
-
       // Token'ı kullanarak şifre güncelleme
       const { error: updateError } = await supabase.auth.updateUser({
         password: password
-      }, {
-        headers: {
-          Authorization: `Bearer ${access_token}`
-        }
       });
 
       if (updateError) {
         console.error('Şifre güncelleme hatası:', updateError);
-        setError('Şifre güncellenemedi. Lütfen daha sonra tekrar deneyin.');
-        setIsLoading(false);
-        return;
+        
+        // Eğer oturum hatası varsa, yeni bir oturum başlatmayı deneyelim
+        if (updateError.message.includes('Auth session missing')) {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token,
+            refresh_token: null
+          });
+
+          if (sessionError) {
+            setError('Oturum başlatılamadı. Lütfen bağlantıyı tekrar deneyin.');
+            setIsLoading(false);
+            return;
+          }
+
+          // Tekrar şifre güncellemeyi deneyelim
+          const { error: retryError } = await supabase.auth.updateUser({
+            password: password
+          });
+
+          if (retryError) {
+            setError('Şifre güncellenemedi. Lütfen daha sonra tekrar deneyin.');
+            setIsLoading(false);
+            return;
+          }
+        } else {
+          setError('Şifre güncellenemedi. Lütfen daha sonra tekrar deneyin.');
+          setIsLoading(false);
+          return;
+        }
       }
 
       setMessage('Şifreniz başarıyla güncellendi!');
