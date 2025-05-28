@@ -2,14 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 
-function getAccessToken(location) {
-  const query = new URLSearchParams(location.search);
-  let access_token = query.get('access_token');
-  if (!access_token && location.hash) {
-    const hashParams = new URLSearchParams(location.hash.replace(/^#/, ''));
-    access_token = hashParams.get('access_token');
+function getTokens(location) {
+  // 1. Önce hash'ten çek
+  const hashParams = new URLSearchParams(location.hash.replace(/^#/, ''));
+  let access_token = hashParams.get('access_token');
+  let refresh_token = hashParams.get('refresh_token');
+
+  // 2. Eğer hash'te yoksa query'den çek (geçici çözüm)
+  if (!access_token || !refresh_token) {
+    const query = new URLSearchParams(location.search);
+    access_token = access_token || query.get('access_token');
+    refresh_token = refresh_token || query.get('refresh_token');
   }
-  return access_token;
+
+  return { access_token, refresh_token };
 }
 
 const validatePassword = (password) => {
@@ -19,21 +25,11 @@ const validatePassword = (password) => {
   const hasNumbers = /\d/.test(password);
   const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
 
-  if (password.length < minLength) {
-    return 'Şifre en az 8 karakter uzunluğunda olmalıdır.';
-  }
-  if (!hasUpperCase) {
-    return 'Şifre en az bir büyük harf içermelidir.';
-  }
-  if (!hasLowerCase) {
-    return 'Şifre en az bir küçük harf içermelidir.';
-  }
-  if (!hasNumbers) {
-    return 'Şifre en az bir rakam içermelidir.';
-  }
-  if (!hasSpecialChar) {
-    return 'Şifre en az bir özel karakter içermelidir.';
-  }
+  if (password.length < minLength) return 'Şifre en az 8 karakter uzunluğunda olmalıdır.';
+  if (!hasUpperCase) return 'Şifre en az bir büyük harf içermelidir.';
+  if (!hasLowerCase) return 'Şifre en az bir küçük harf içermelidir.';
+  if (!hasNumbers) return 'Şifre en az bir rakam içermelidir.';
+  if (!hasSpecialChar) return 'Şifre en az bir özel karakter içermelidir.';
   return null;
 };
 
@@ -45,14 +41,14 @@ const ResetPassword = () => {
   const [isLoading, setIsLoading] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const access_token = getAccessToken(location);
+
+  const { access_token, refresh_token } = getTokens(location);
 
   useEffect(() => {
-    if (!access_token) {
-      setError('Geçersiz veya eksik bağlantı.');
-      return;
+    if (!access_token || !refresh_token) {
+      setError('Geçersiz bağlantı veya token eksik.');
     }
-  }, [access_token]);
+  }, [access_token, refresh_token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -80,31 +76,25 @@ const ResetPassword = () => {
     }
 
     try {
-      // Önce mevcut oturumu sonlandır
+      // Oturumu kapat (önlem olarak)
       await supabase.auth.signOut();
 
-      // Yeni oturum başlat
-      const { data: { session }, error: sessionError } = await supabase.auth.setSession({
+      // Oturumu token ile başlat
+      const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
         access_token,
-        refresh_token: null
+        refresh_token,
       });
 
-      if (sessionError) {
+      if (sessionError || !sessionData.session) {
         console.error('Oturum hatası:', sessionError);
-        setError('Oturum başlatılamadı. Lütfen bağlantıyı tekrar deneyin.');
+        setError('Oturum başlatılamadı. Lütfen bağlantıyı kontrol edin.');
         setIsLoading(false);
         return;
       }
 
-      if (!session) {
-        setError('Oturum oluşturulamadı. Lütfen bağlantıyı tekrar deneyin.');
-        setIsLoading(false);
-        return;
-      }
-
-      // Şifre güncelleme
+      // Şifreyi güncelle
       const { error: updateError } = await supabase.auth.updateUser({
-        password: password
+        password: password,
       });
 
       if (updateError) {
@@ -115,13 +105,16 @@ const ResetPassword = () => {
       }
 
       setMessage('Şifreniz başarıyla güncellendi!');
-      setIsLoading(false);
+      setTimeout(() => {
+        navigate('/login');
+      }, 2500);
 
     } catch (err) {
       console.error('Genel hata:', err);
       setError('Bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
-      setIsLoading(false);
     }
+
+    setIsLoading(false);
   };
 
   return (
@@ -150,17 +143,17 @@ const ResetPassword = () => {
           />
           <button
             type="submit"
-            style={{ 
-              width: '100%', 
-              padding: 12, 
-              borderRadius: 8, 
-              background: isLoading ? '#666' : '#111', 
-              color: '#fff', 
-              fontWeight: 'bold', 
-              fontSize: 16, 
-              border: 'none', 
-              cursor: isLoading ? 'not-allowed' : 'pointer', 
-              height: 48 
+            style={{
+              width: '100%',
+              padding: 12,
+              borderRadius: 8,
+              background: isLoading ? '#666' : '#111',
+              color: '#fff',
+              fontWeight: 'bold',
+              fontSize: 16,
+              border: 'none',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              height: 48
             }}
             disabled={isLoading}
           >
@@ -174,4 +167,4 @@ const ResetPassword = () => {
   );
 };
 
-export default ResetPassword; 
+export default ResetPassword;
