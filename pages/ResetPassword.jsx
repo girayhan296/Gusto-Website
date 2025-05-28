@@ -82,40 +82,54 @@ const ResetPassword = () => {
     }
 
     try {
-      // Önce mevcut oturumu kontrol edelim
-      const { data: { session }, error: sessionCheckError } = await supabase.auth.getSession();
-      
-      if (sessionCheckError) {
-        setError('Oturum kontrolü başarısız: ' + sessionCheckError.message);
-        setIsLoading(false);
-        return;
-      }
+      // Doğrudan şifre güncelleme işlemini deneyelim
+      const { data, error: updateError } = await supabase.auth.updateUser({ 
+        password: password,
+        options: {
+          emailRedirectTo: window.location.origin + '/login'
+        }
+      });
 
-      // Eğer aktif bir oturum yoksa, yeni oturum başlatmaya çalışalım
-      if (!session) {
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token,
-          refresh_token: null // null olarak değiştirdik
-        });
+      if (updateError) {
+        console.error('Şifre güncelleme hatası:', updateError);
+        
+        // Eğer oturum hatası varsa, yeni bir oturum başlatmayı deneyelim
+        if (updateError.message.includes('Auth session missing')) {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token,
+            refresh_token: null
+          });
 
-        if (sessionError) {
-          setError('Oturum başlatılamadı: ' + sessionError.message);
+          if (sessionError) {
+            setError('Oturum başlatılamadı: ' + sessionError.message);
+            setIsLoading(false);
+            return;
+          }
+
+          // Tekrar şifre güncellemeyi deneyelim
+          const { error: retryError } = await supabase.auth.updateUser({ 
+            password: password 
+          });
+
+          if (retryError) {
+            setError('Şifre güncellenemedi: ' + retryError.message);
+            setIsLoading(false);
+            return;
+          }
+        } else {
+          setError('Şifre güncellenemedi: ' + updateError.message);
           setIsLoading(false);
           return;
         }
       }
 
-      // Şifre güncelleme işlemi
-      const { error: updateError } = await supabase.auth.updateUser({ password });
-      if (updateError) {
-        setError('Şifre güncellenemedi: ' + updateError.message);
-      } else {
-        setMessage('Şifreniz başarıyla güncellendi! Yönlendiriliyorsunuz...');
-        // Başarılı şifre değişikliğinden sonra oturumu sonlandır
-        await supabase.auth.signOut();
-        setTimeout(() => navigate('/login'), 2000);
-      }
+      setMessage('Şifreniz başarıyla güncellendi! Yönlendiriliyorsunuz...');
+      // Başarılı şifre değişikliğinden sonra oturumu sonlandır
+      await supabase.auth.signOut();
+      setTimeout(() => navigate('/login'), 2000);
+      
     } catch (err) {
+      console.error('Genel hata:', err);
       setError('Bir hata oluştu: ' + (err.message || 'Bilinmeyen bir hata oluştu'));
     } finally {
       setIsLoading(false);
