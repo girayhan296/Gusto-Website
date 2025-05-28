@@ -50,9 +50,9 @@ const ResetPassword = () => {
   useEffect(() => {
     if (!access_token) {
       setError('Geçersiz veya eksik bağlantı.');
-      setTimeout(() => navigate('/login'), 3000);
+      return;
     }
-  }, [access_token, navigate]);
+  }, [access_token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -80,52 +80,26 @@ const ResetPassword = () => {
     }
 
     try {
-      // Doğrudan şifre güncelleme işlemini deneyelim
+      // Önce token'ı decode edelim
+      const tokenParts = access_token.split('.');
+      if (tokenParts.length !== 3) {
+        throw new Error('Geçersiz token formatı');
+      }
+
+      // Token'ı kullanarak şifre güncelleme
       const { error: updateError } = await supabase.auth.updateUser({
-        password: password,
-        options: {
-          data: {
-            email_confirm: true
-          }
+        password: password
+      }, {
+        headers: {
+          Authorization: `Bearer ${access_token}`
         }
       });
 
       if (updateError) {
         console.error('Şifre güncelleme hatası:', updateError);
-        
-        // Eğer oturum hatası varsa, yeni bir oturum başlatmayı deneyelim
-        if (updateError.message.includes('Auth session missing')) {
-          const { error: sessionError } = await supabase.auth.setSession({
-            access_token,
-            refresh_token: null
-          });
-
-          if (sessionError) {
-            setError('Oturum başlatılamadı. Lütfen bağlantıyı tekrar deneyin.');
-            setIsLoading(false);
-            return;
-          }
-
-          // Tekrar şifre güncellemeyi deneyelim
-          const { error: retryError } = await supabase.auth.updateUser({
-            password: password,
-            options: {
-              data: {
-                email_confirm: true
-              }
-            }
-          });
-
-          if (retryError) {
-            setError('Şifre güncellenemedi. Lütfen daha sonra tekrar deneyin.');
-            setIsLoading(false);
-            return;
-          }
-        } else {
-          setError('Şifre güncellenemedi. Lütfen daha sonra tekrar deneyin.');
-          setIsLoading(false);
-          return;
-        }
+        setError('Şifre güncellenemedi. Lütfen daha sonra tekrar deneyin.');
+        setIsLoading(false);
+        return;
       }
 
       setMessage('Şifreniz başarıyla güncellendi!');
@@ -134,7 +108,6 @@ const ResetPassword = () => {
     } catch (err) {
       console.error('Genel hata:', err);
       setError('Bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
-    } finally {
       setIsLoading(false);
     }
   };
