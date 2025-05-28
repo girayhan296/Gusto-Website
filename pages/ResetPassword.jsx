@@ -3,10 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 
 function getAccessToken(location) {
-  // Query string'den
   const query = new URLSearchParams(location.search);
   let access_token = query.get('access_token');
-  // Hash'ten
   if (!access_token && location.hash) {
     const hashParams = new URLSearchParams(location.hash.replace(/^#/, ''));
     access_token = hashParams.get('access_token');
@@ -82,39 +80,40 @@ const ResetPassword = () => {
     }
 
     try {
-      // Önce kullanıcı bilgilerini alalım
-      const { data: { user }, error: userError } = await supabase.auth.getUser(access_token);
-      
-      if (userError) {
-        setError('Kullanıcı bilgileri alınamadı: ' + userError.message);
+      // Önce mevcut oturumu sonlandır
+      await supabase.auth.signOut();
+
+      // Yeni oturum başlat
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token,
+        refresh_token: null
+      });
+
+      if (sessionError) {
+        console.error('Oturum hatası:', sessionError);
+        setError('Oturum başlatılamadı. Lütfen bağlantıyı tekrar deneyin.');
         setIsLoading(false);
         return;
       }
 
-      if (!user) {
-        setError('Kullanıcı bulunamadı.');
-        setIsLoading(false);
-        return;
-      }
-
-      // Şifre güncelleme işlemi
-      const { error: updateError } = await supabase.auth.admin.updateUserById(
-        user.id,
-        { password: password }
-      );
+      // Şifre güncelleme
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: password
+      });
 
       if (updateError) {
-        setError('Şifre güncellenemedi: ' + updateError.message);
+        console.error('Şifre güncelleme hatası:', updateError);
+        setError('Şifre güncellenemedi. Lütfen daha sonra tekrar deneyin.');
         setIsLoading(false);
         return;
       }
 
       setMessage('Şifreniz başarıyla güncellendi! Yönlendiriliyorsunuz...');
       setTimeout(() => navigate('/login'), 2000);
-      
+
     } catch (err) {
       console.error('Genel hata:', err);
-      setError('Bir hata oluştu: ' + (err.message || 'Bilinmeyen bir hata oluştu'));
+      setError('Bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
     } finally {
       setIsLoading(false);
     }
