@@ -80,42 +80,38 @@ const ResetPassword = () => {
     }
 
     try {
-      // Token'ı kullanarak şifre güncelleme
+      // Önce mevcut oturumu sonlandır
+      await supabase.auth.signOut();
+
+      // Yeni oturum başlat
+      const { data: { session }, error: sessionError } = await supabase.auth.setSession({
+        access_token,
+        refresh_token: null
+      });
+
+      if (sessionError) {
+        console.error('Oturum hatası:', sessionError);
+        setError('Oturum başlatılamadı. Lütfen bağlantıyı tekrar deneyin.');
+        setIsLoading(false);
+        return;
+      }
+
+      if (!session) {
+        setError('Oturum oluşturulamadı. Lütfen bağlantıyı tekrar deneyin.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Şifre güncelleme
       const { error: updateError } = await supabase.auth.updateUser({
         password: password
       });
 
       if (updateError) {
         console.error('Şifre güncelleme hatası:', updateError);
-        
-        // Eğer oturum hatası varsa, yeni bir oturum başlatmayı deneyelim
-        if (updateError.message.includes('Auth session missing')) {
-          const { error: sessionError } = await supabase.auth.setSession({
-            access_token,
-            refresh_token: null
-          });
-
-          if (sessionError) {
-            setError('Oturum başlatılamadı. Lütfen bağlantıyı tekrar deneyin.');
-            setIsLoading(false);
-            return;
-          }
-
-          // Tekrar şifre güncellemeyi deneyelim
-          const { error: retryError } = await supabase.auth.updateUser({
-            password: password
-          });
-
-          if (retryError) {
-            setError('Şifre güncellenemedi. Lütfen daha sonra tekrar deneyin.');
-            setIsLoading(false);
-            return;
-          }
-        } else {
-          setError('Şifre güncellenemedi. Lütfen daha sonra tekrar deneyin.');
-          setIsLoading(false);
-          return;
-        }
+        setError('Şifre güncellenemedi. Lütfen daha sonra tekrar deneyin.');
+        setIsLoading(false);
+        return;
       }
 
       setMessage('Şifreniz başarıyla güncellendi!');
