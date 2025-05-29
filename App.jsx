@@ -4,6 +4,7 @@ import Signup from './pages/Signup';
 import ResetRequest from './pages/ResetRequest';
 import ResetPassword from './pages/ResetPassword';
 import EmailConfirm from './pages/EmailConfirm';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 
 function Navigation() {
   const location = useLocation();
@@ -14,7 +15,8 @@ function Navigation() {
       <Link to="/">Ana Sayfa</Link> |{' '}
       <Link to="/signup">Kayıt Ol</Link> |{' '}
       <Link to="/reset">Şifre Sıfırla</Link> |{' '}
-      <Link to="/email-confirm">E-posta Doğrula</Link>
+      <Link to="/email-confirm">E-posta Doğrula</Link> |{' '}
+      <Link to="/privacy-policy">Gizlilik Politikası</Link>
     </nav>
   );
 }
@@ -63,6 +65,7 @@ function App() {
         <Route path="/reset" element={<ResetRequest />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/email-confirm" element={<EmailConfirm />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
       </Routes>
     </BrowserRouter>
   );
