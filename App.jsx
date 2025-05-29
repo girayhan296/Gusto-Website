@@ -9,14 +9,13 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 function Navigation() {
   const location = useLocation();
   // Navigasyon sadece /email-confirm, /reset-password ve ana sayfa dışında gösterilsin
-  if (['/email-confirm', '/reset-password', '/'].includes(location.pathname)) return null;
+  if (['/email-confirm', '/reset-password', '/', '/privacy-policy'].includes(location.pathname)) return null;
   return (
     <nav style={{textAlign:'center',margin:'2rem'}}>
       <Link to="/">Ana Sayfa</Link> |{' '}
       <Link to="/signup">Kayıt Ol</Link> |{' '}
       <Link to="/reset">Şifre Sıfırla</Link> |{' '}
-      <Link to="/email-confirm">E-posta Doğrula</Link> |{' '}
-      <Link to="/privacy-policy">Gizlilik Politikası</Link>
+      <Link to="/email-confirm">E-posta Doğrula</Link>
     </nav>
   );
 }
