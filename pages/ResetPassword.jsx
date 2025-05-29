@@ -89,10 +89,7 @@ const ResetPassword = () => {
         console.error('Şifre güncelleme hatası:', updateError);
         setError('Şifre güncellenemedi. Lütfen tekrar deneyin.');
       } else {
-        setMessage('Şifreniz başarıyla güncellendi!');
-        setTimeout(() => {
-          navigate('/login');
-        }, 2500);
+        setMessage('Şifreniz başarıyla güncellendi! Uygulama üzerinden tekrar oturum açabilirsiniz.');
       }
     } catch (err) {
       console.error('Genel hata:', err);
