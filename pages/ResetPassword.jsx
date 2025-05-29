@@ -2,6 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 
+function getTokensFromHash() {
+  const hashParams = new URLSearchParams(window.location.hash.slice(1));
+  return {
+    access_token: hashParams.get('access_token'),
+    refresh_token: hashParams.get('refresh_token'),
+  };
+}
+
 const validatePassword = (password) => {
   const minLength = 8;
   const hasUpperCase = /[A-Z]/.test(password);
@@ -20,22 +28,33 @@ const validatePassword = (password) => {
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
-  const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
 
   useEffect(() => {
-    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        console.log('Password recovery event detected');
-      }
-    });
+    const { access_token, refresh_token } = getTokensFromHash();
 
-    return () => {
-      listener.subscription.unsubscribe();
+    if (!access_token || !refresh_token) {
+      setError('Geçersiz bağlantı. Lütfen şifre sıfırlama e-postasındaki bağlantıyı kullanın.');
+      return;
+    }
+
+    const restoreSession = async () => {
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token,
+        refresh_token,
+      });
+
+      if (sessionError) {
+        console.error('Oturum başlatılamadı:', sessionError);
+        setError('Oturum başlatılamadı. Lütfen bağlantıyı tekrar kontrol edin.');
+      }
     };
+
+    restoreSession();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -87,9 +106,6 @@ const ResetPassword = () => {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: '#fff' }}>
       <div style={{ maxWidth: 400, width: '100%', padding: 32, borderRadius: 16, boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}>
         <h2 style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: 16 }}>Yeni Şifre Belirle</h2>
-        <p style={{ textAlign: 'center', marginBottom: 24, color: '#444' }}>
-          Lütfen yeni şifrenizi girin ve onaylayın.
-        </p>
         <form onSubmit={handleSubmit}>
           <input
             type="password"
